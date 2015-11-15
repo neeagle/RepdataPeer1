@@ -1,0 +1,38 @@
+act <- read.csv("./Peer 1/activity.csv")
+library(dplyr)
+#library(tidyr)
+library(lubridate)
+Sys.setlocale("LC_ALL", "English")
+
+act$date <- ymd(act$date)
+act_by_date <- group_by(act, date)
+step_by_date<- summarize(act_by_date, total_step = sum(steps))
+hist(step_by_date$total_step)
+mean(step_by_date$total_step, na.rm = TRUE)
+median(step_by_date$total_step, na.rm = TRUE)
+
+interval_count <- summarize(act_by_date, n())[2]
+act_by_interval <- mutate(act, rep_int = rep(1:288, 61))
+actby_rep_int <- group_by(act_by_interval, rep_int)
+daily_step <- summarize(actby_rep_int, av_step = mean(steps, na.rm = TRUE))
+plot(daily_step, type = "l")
+filter(daily_step, av_step == max(av_step))
+
+#na_rows <- filter(act, is.na(steps))
+sum(is.na(act$steps))
+act_imputed <-actby_rep_int
+act_imputed$steps[is.na(act_imputed$steps)] <- daily_step$av_step[act_imputed$rep_int[is.na(act_imputed$steps)]]
+imp_by_date <- group_by(act_imputed, date)
+impstep_by_date<- summarize(imp_by_date, total_step = sum(steps))
+hist(impstep_by_date$total_step)
+mean(impstep_by_date$total_step)
+mean(step_by_date$total_step, na.rm = TRUE)
+median(impstep_by_date$total_step)
+median(step_by_date$total_step, na.rm = TRUE)
+
+act_imputed$wd <- factor(weekdays(act_imputed$date) %in% c("Saturday", "Sunday"), levels=c(FALSE, TRUE), labels=c("weekday", "weekend"))
+imp_wd <- group_by(act_imputed, wd, rep_int)
+wd_step <- summarize(imp_wd, av_step = mean(steps))
+library(lattice)
+xyplot(av_step~rep_int | wd,wd_step, type = "l", layout=c(1,2))
+
